@@ -9,15 +9,15 @@ import {
 } from '@apollo/client'
 
 const client = new ApolloClient({
-  /*uri: 'http://localhost:4000',*/
-  uri: 'https://didactic-train-wx6prvp5vp7c5569-4000.app.github.dev/',
-  /*credentials: 'same-origin',*/
+  uri: 'http://localhost:4000',
+  //uri: 'https://didactic-train-wx6prvp5vp7c5569-4000.app.github.dev/',
+
   cache: new InMemoryCache(),
 })
 
 ReactDOM.createRoot(document.getElementById('root')).render(
 
   <ApolloProvider client={client}>
-    <App />
+   <App />
   </ApolloProvider>
 )
