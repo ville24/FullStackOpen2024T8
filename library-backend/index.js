@@ -1,7 +1,15 @@
 const { ApolloServer } = require('@apollo/server')
 const { startStandaloneServer } = require('@apollo/server/standalone')
+const { GraphQLError } = require('graphql')
 
-let authors = [
+const mongoose = require('mongoose')
+mongoose.set('strictQuery', false)
+const Book = require('./models/book')
+const Author = require('./models/author')
+
+require('dotenv').config()
+
+/*let authors = [
   {
     name: 'Robert Martin',
     id: "afa51ab0-344d-11e9-a414-719c6709cf3e",
@@ -77,13 +85,26 @@ let books = [
     id: "afa5de04-344d-11e9-a414-719c6709cf3e",
     genres: ['classic', 'revolution']
   },
-]
+]*/
+
+const MONGODB_URI = process.env.MONGODB_URI
+
+console.log('connecting to', MONGODB_URI)
+
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log('connected to MongoDB')
+  })
+  .catch((error) => {
+    console.log('error connection to MongoDB:', error.message)
+  })
+
 
 const typeDefs = `
   type Book {
     title: String!
     published: Int!
-    author: String!
+    author: Author!
     genres: [String!]!
     id: ID!
   }
@@ -116,31 +137,82 @@ const typeDefs = `
     ): Author
   }
 `
+
 const { v1: uuid } = require('uuid')
 
 const resolvers = {
   Query: {
-    bookCount: () => books.length,
-    authorCount: () => authors.length,
-    allBooks: (root, args) => books.filter(book => (!args.author || book.author === args.author) && (!args.genre || book.genres.find(genre => genre === args.genre))),
-    allAuthors: () => authors
+    bookCount: async () => Book.collection.countDocuments(),
+    authorCount: async() => Author.collection.countDocuments(),
+    allBooks: async (root, args) => {
+      if (args.author) {
+        const author = await Author.findOne({ name: args.author })
+        return Book.find({ author: author.id})
+      }
+      else if (args.genre) {
+        return Book.find({ genres: { $in : [args.genre] } })
+      }
+      else {
+        return Book.find({})
+      }
+    },
+    allAuthors: async () => Author.find({})
   },
   Author: {
-    bookCount: ({name}) => books.filter(book => book.author === name).length
+    bookCount: async ({ id }) => Book.find({ author: { _id: id } }).countDocuments()
+  },
+  Book: {
+    author: async ({ author }) => Author.findOne({ _id: author._id })
   },
   Mutation: {
-    addBook: (root, args) => {
-      const book = { ...args, id: uuid() }
-      books = books.concat(book)
-      !authors.find(author => author.name === args.author) && (authors = authors.concat({name: args.author, id: uuid()}))
+    addBook: async (root, args) => {
+      let author = await Author.findOne({ name: args.author })
+      if (!author) {
+        try {
+          author = await new Author({ name: args.author }).save()
+        }
+        catch (error) {
+          throw new GraphQLError('Adding author failed', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              invalidArgs: args.name,
+              error
+            }
+          })   
+        }
+      }
+      const book = new Book({ ...args, author: author, id: uuid() })
+      try {
+        await book.save()
+      }
+      catch (error) {
+        throw new GraphQLError('Saving book failed', {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            invalidArgs: args.name,
+            error
+          }
+        })
+      }
       return book
     },
-    editAuthor: (root, args) => {
-      const author = authors.find(a => a.name === args.name)
+    editAuthor: async (root, args) => {
+      const author = await Author.findOne({ name: args.name })
       if (!author) { return null }
-      const updatedAuthor = {...author, born: args.setBornTo}
-      authors = authors.map(a => a.name === args.name ? updatedAuthor : a)
-      return updatedAuthor
+      author.born = args.setBornTo
+      try {
+        author.save()
+      }
+      catch (error) {
+        throw new GraphQLError('Editing author failed', {
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            invalidArgs: args.name,
+            error
+          }
+        })       
+      }
+      return author
     }
   }
 }
