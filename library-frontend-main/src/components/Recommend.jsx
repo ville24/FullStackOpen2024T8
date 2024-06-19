@@ -3,20 +3,27 @@ import { useQuery } from '@apollo/client'
 import { ME, ALL_BOOKS } from '../queries'
 
 const Recommend = (props) => {
-  const me = useQuery(ME)
-  const result = useQuery(ALL_BOOKS)
 
-  if (result.loading)  {
+  const resultMe = useQuery(ME, {
+    skip: !props.show
+  })
+
+  const genre = (!resultMe.loading && resultMe.data && resultMe.data.me) ? resultMe.data.me.favoriteGenre : null
+
+  const resultBooks = useQuery(ALL_BOOKS, { 
+    variables: { genre: genre },
+    skip: !genre
+  })
+
+  if (resultMe.loading || resultBooks.loading)  {
     return <div>loading...</div>
   }
-
-  const books = result.data.allBooks
-
-  const booksFiltered = books.filter((b) => b.genres.find(g => g === me.genre))
+  
+  const booksFiltered = (!resultBooks.loading && resultBooks.data) ? resultBooks.data.allBooks : []
 
   if (!props.show) {
     return null
-  }
+  } 
 
   return (
     <div>
@@ -44,6 +51,7 @@ const Recommend = (props) => {
       </table>
     </div>
   )
+
 }
 
 export default Recommend

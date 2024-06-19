@@ -56,8 +56,9 @@ const App = () => {
 
       <NewBook show={page === "add"} />
 
-      <Recommend show={page === "recommed"} />
-
+      {
+        token && <Recommend show={page === "recommend"} />
+      }
       {
         !token && <Login show={page === 'login'} loginHandle={loginHandle} />
       }

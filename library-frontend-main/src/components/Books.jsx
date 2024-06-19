@@ -7,7 +7,13 @@ const Books = (props) => {
   const [genre, setGenre] = useState(null);
   const result = useQuery(ALL_BOOKS)
 
-  if (result.loading)  {
+  const resultBooksByGenre = useQuery(ALL_BOOKS, { 
+    variables: { genre: genre },
+    skip: !genre,
+    fetchPolicy: 'network-only'
+  })
+
+  if (result.loading || resultBooksByGenre.loading)  {
     return <div>loading...</div>
   }
 
@@ -17,7 +23,7 @@ const Books = (props) => {
   const genresFlat = [].concat(...genres)
   const genresList = [...new Set(genresFlat)]
 
-  const booksFiltered = genre ? books.filter((b) => b.genres.find(g => g === genre)) : books
+  const booksFiltered = (!resultBooksByGenre.loading && resultBooksByGenre.data) ? resultBooksByGenre.data.allBooks : books
 
   if (!props.show) {
     return null
