@@ -14,16 +14,16 @@ const resolvers = {
     bookCount: async () => Book.collection.countDocuments(),
     authorCount: async() => Author.collection.countDocuments(),
     allBooks: async (root, args) => {
+      const query = {}
       if (args.author) {
         const author = await Author.findOne({ name: args.author })
-        return Book.find({ author: author.id})
+        query.author = author.id
       }
-      else if (args.genre) {
-        return Book.find({ genres: { $in : [args.genre] } })
+      if (args.genre) {
+        query.genres = { $in : [args.genre] } 
       }
-      else {
-        return Book.find({})
-      }
+      return Book.find(query)
+      
     },
     allAuthors: async () => Author.find({}),
     me: (root, args, context) => {

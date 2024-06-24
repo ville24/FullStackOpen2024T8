@@ -1,12 +1,30 @@
-import React from "react";
-import { useState } from "react";
-import { useApolloClient } from '@apollo/client'
+import React from "react"
+import { useState } from "react"
+import { useQuery, useApolloClient, useSubscription } from "@apollo/client"
+import { ALL_BOOKS, BOOK_ADDED } from "./queries.js"
 
 import Authors from "./components/Authors";
 import Books from "./components/Books";
 import NewBook from "./components/NewBook";
 import Login from "./components/Login";
 import Recommend from "./components/Recommend";
+
+export const updateCache = (cache, query, addedBook) => {
+  console.log(query)
+  const uniqByTitle = (a) => {
+    let seen = new Set()
+    return a.filter((item) => {
+      let k = item.title
+      return seen.has(k) ? false : seen.add(k)
+    })
+  }
+
+  cache.updateQuery(query, ({ allBooks }) => {
+    return {
+      allBooks: uniqByTitle(allBooks.concat(addedBook)),
+    }
+  })
+}
 
 const App = () => {
   const client = useApolloClient()
@@ -30,6 +48,18 @@ const App = () => {
     localStorage.clear()
     client.resetStore()
   }
+
+  useSubscription(BOOK_ADDED, {
+    onData: ({ data }) => {
+      alert('book added: ' + data.data.bookAdded.title)
+      //client.refetchQueries({ include: ['ALL_AUTHORS'] })
+      const addedBook = data.data.bookAdded
+      updateCache(client.cache, { query: ALL_BOOKS }, addedBook)
+      data.data.bookAdded.genres.map(genre => {
+        updateCache(client.cache, { query: ALL_BOOKS, variables: { genre: genre } }, addedBook)
+      })
+    }
+  })
 
   return (
     <div>

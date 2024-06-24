@@ -10,7 +10,7 @@ const Books = (props) => {
   const resultBooksByGenre = useQuery(ALL_BOOKS, { 
     variables: { genre: genre },
     skip: !genre,
-    fetchPolicy: 'network-only'
+    //fetchPolicy: 'network-only'
   })
 
   if (result.loading || resultBooksByGenre.loading)  {
