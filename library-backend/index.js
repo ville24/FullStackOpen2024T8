@@ -10,6 +10,8 @@ const http = require('http')
 const { WebSocketServer } = require('ws')
 const { useServer } = require('graphql-ws/lib/use/ws')
 
+const loaders = require('./loaders')
+
 const mongoose = require('mongoose')
 mongoose.set('strictQuery', false)
 const jwt = require('jsonwebtoken')
@@ -71,7 +73,17 @@ const start = async () => {
         if (auth && auth.startsWith('Bearer ')) {
           const decodedToken = jwt.verify(auth.substring(7), process.env.JWT_SECRET)
           const currentUser = await User.findById(decodedToken.id)
-          return { currentUser }
+          return { 
+            currentUser,
+            loaders: {
+              booksCount: loaders,
+            },
+          }
+        }
+        return {
+          loaders: {
+            booksCount: loaders,
+          },
         }
       },
     }),

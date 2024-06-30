@@ -26,13 +26,11 @@ const authLink = setContext((_, { headers }) => {
 })
 
 const httpLink = createHttpLink({
-  //uri: 'http://localhost:4000',
-  uri: 'https://refactored-winner-g69j4xjr57w2wpq4-4000.app.github.dev/',
+  uri: 'http://localhost:4000',
 })
 
 const wsLink = new GraphQLWsLink(createClient({
-  //url: 'ws://localhost:4000',
-  url: 'ws://refactored-winner-g69j4xjr57w2wpq4-4000.app.github.dev/',
+  url: 'ws://localhost:4000',
 }))
 
 const splitLink = split(

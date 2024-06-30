@@ -1,7 +1,7 @@
 import React from "react"
 import { useState } from "react"
 import { useQuery, useApolloClient, useSubscription } from "@apollo/client"
-import { ALL_BOOKS, BOOK_ADDED } from "./queries.js"
+import { ALL_BOOKS, BOOK_ADDED, ALL_AUTHORS } from "./queries.js"
 
 import Authors from "./components/Authors";
 import Books from "./components/Books";
@@ -10,7 +10,6 @@ import Login from "./components/Login";
 import Recommend from "./components/Recommend";
 
 export const updateCache = (cache, query, addedBook) => {
-  console.log(query)
   const uniqByTitle = (a) => {
     let seen = new Set()
     return a.filter((item) => {
@@ -19,11 +18,14 @@ export const updateCache = (cache, query, addedBook) => {
     })
   }
 
-  cache.updateQuery(query, ({ allBooks }) => {
-    return {
-      allBooks: uniqByTitle(allBooks.concat(addedBook)),
-    }
-  })
+  try {
+    cache.updateQuery(query, ({ allBooks }) => {
+      return {
+        allBooks: uniqByTitle(allBooks.concat(addedBook)),
+      }
+    })
+  }
+  catch(err) {}
 }
 
 const App = () => {
@@ -50,12 +52,12 @@ const App = () => {
   }
 
   useSubscription(BOOK_ADDED, {
-    onData: ({ data }) => {
+    onData: async ({ data }) => {
       alert('book added: ' + data.data.bookAdded.title)
-      //client.refetchQueries({ include: ['ALL_AUTHORS'] })
+      await client.refetchQueries({ include: [ALL_AUTHORS] })
       const addedBook = data.data.bookAdded
       updateCache(client.cache, { query: ALL_BOOKS }, addedBook)
-      data.data.bookAdded.genres.map(genre => {
+      addedBook.genres.map(genre => {
         updateCache(client.cache, { query: ALL_BOOKS, variables: { genre: genre } }, addedBook)
       })
     }

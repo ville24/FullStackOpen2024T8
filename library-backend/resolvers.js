@@ -27,20 +27,17 @@ const resolvers = {
     },
     allAuthors: async () => {
       console.log('Author.find')
-      return Author.find({}).populate('books')
+      return await Author.find({})
     },
     me: (root, args, context) => {
       return context.currentUser
     }
   },
-  /*Author: {
-    bookCount: async ({ id }) => {
-      console.log('Book.find')
-      return Book.find({ author: { _id: id } }).countDocuments()
-    }
-  },*/
   Author: {
-    bookCount: (root) => root.books.length
+    bookCount: async (root, _args, { loaders } ) => {
+      return await loaders.booksCount.load(root._id)
+      //return Book.find({ author: { _id: root._id } }).countDocuments()
+    }
   },
   Book: {
     author: async ({ author }) => Author.findOne({ _id: author._id })
@@ -56,11 +53,11 @@ const resolvers = {
           }
         })
       }
-      const book = new Book({ ...args, id: uuid() })
+
       let author = await Author.findOne({ name: args.author })
       if (!author) {
         try {
-          author = await new Author({ name: args.author, books: [book.id] }).save()
+          author = await new Author({ name: args.author }).save()
         }
         catch (error) {
           throw new GraphQLError('Adding author failed', {
@@ -72,23 +69,7 @@ const resolvers = {
           })   
         }
       }
-      else {
-        author.books.push(book.id)
-        console.log(author)
-        try {
-          //author.save()
-        }
-        catch (error) {
-          throw new GraphQLError('Editing author failed', {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              invalidArgs: args.name,
-              error
-            }
-          })       
-        }
-      }
-      book.author = author
+      const book = new Book({ ...args, author: author, id: uuid() })
       try {
         await book.save()
       }
